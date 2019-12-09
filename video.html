@@ -9,13 +9,13 @@
       const imageHolder = document.querySelector("#image-holder");
       const fs = new FileReader();
       fs.addEventListener("loadend", ({ srcElement: { result } }) =>
-        imageHolder.setAttribute("src", `data:image/png;base64,${result}`)
+        imageHolder.setAttribute("src", `data:image/jpg;base64,${result}`)
       );
       ws.onopen = () => ws.send("receiver");
       ws.onmessage = message => {
-        console.info(message);
-        fs.readAsText(message.data);
-      }
+        if (fs.readyState !== 1)
+          fs.readAsText(message.data);
+      };
     });
   </script>
 </hmtl>
