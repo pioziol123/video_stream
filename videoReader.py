@@ -1,12 +1,8 @@
 import cv2
 import asyncio
-import websockets
-from io import BytesIO
-import numpy as np
 from base64 import b64encode
-import time
 import zmq
-from zmq.asyncio import Context, ZMQEventLoop
+from zmq.asyncio import Context
 
 ctx =Context()
 vc = cv2.VideoCapture(0)
@@ -25,5 +21,4 @@ async def stream():
         await socket.send_multipart([b"1", b64encode(image.tobytes())])
         await asyncio.sleep(1000/15000)
 
-asyncio.set_event_loop(ZMQEventLoop())
 asyncio.get_event_loop().run_until_complete(stream())

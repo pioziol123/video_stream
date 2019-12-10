@@ -1,9 +1,8 @@
 import asyncio
 import websockets
 import zmq
-from zmq.asyncio import Context, Poller, ZMQEventLoop
+from zmq.asyncio import Context, Poller
 
-Url = 'tcp://127.0.0.1:5555'
 Ctx = Context()
 receivers = set()
 
@@ -13,7 +12,6 @@ async def sendPicture(picture):
         for receiver in receivers:
             await receiver.send(picture)
     except Exception as e:
-        print(str(e))
         receivers.remove(receiver)
 
 
@@ -24,7 +22,7 @@ async def handleMessage(websocket, path):
 
 async def handleZMQMessage():
     subscriber = Ctx.socket(zmq.SUB)
-    subscriber.connect(Url)
+    subscriber.connect("tcp://25.33.175.197:5555")
     subscriber.setsockopt(zmq.SUBSCRIBE, b"1")
     poller = Poller()
     poller.register(subscriber, zmq.POLLOUT)
@@ -32,11 +30,9 @@ async def handleZMQMessage():
         topic, data = await subscriber.recv_multipart()
         await sendPicture(data)
 
-asyncio.set_event_loop(ZMQEventLoop())
 asyncio.get_event_loop().run_until_complete(
     asyncio.gather(
         websockets.serve(handleMessage, "localhost", 8765),
         handleZMQMessage()
     )
 )
-# asyncio.get_event_loop().run_forever()
