@@ -22,7 +22,7 @@ async def handleMessage(websocket, path):
 
 async def handleZMQMessage():
     subscriber = Ctx.socket(zmq.SUB)
-    subscriber.connect("tcp://25.33.175.197:5555")
+    subscriber.connect("tcp://raspberry_ip:5555")
     subscriber.setsockopt(zmq.SUBSCRIBE, b"1")
     poller = Poller()
     poller.register(subscriber, zmq.POLLOUT)

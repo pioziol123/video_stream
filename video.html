@@ -1,21 +1,89 @@
 <hmtl>
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  </head>
   <body>
     <image id="image-holder" src="blank.png"></image>
+    <button id="save_button" hidden="hidden">Save image</button>
+    <button id="connect-button" hidden="hidden">Close connection</button>
+    <div id="images"></div>
   </body>
 
   <script>
-    window.addEventListener("load", function() {
-      const ws = new WebSocket("ws://localhost:8765");
-      const imageHolder = document.querySelector("#image-holder");
+    const connectionButton = document.querySelector("#connect-button");
+    const imageHolder = document.querySelector("#image-holder");
+    let ws = null;
+    function downloadPictures(callback) {
+      const getImagesUrl =
+        "https://picturesmanagement.azurewebsites.net/api/showpictures";
+      $.get(getImagesUrl, {}, function(data) {
+        const url = data.url;
+        const images = data.images.map(name => {
+          return `<image class="pic" src="${url}${name}" height="15%  " width="10%"></image>`;
+        });
+        document.querySelector("#images").innerHTML = images;
+        [...document.querySelectorAll(".pic")].forEach(pic => {
+          pic.addEventListener("click", function(event) {
+            window.open(event.target.getAttribute("src"));
+          });
+        });
+        typeof callback === "function" && callback();
+      });
+    }
+    function connectToWS() {
+      ws = new WebSocket("ws://azure_streaming_proxy:8765");
+
       const fs = new FileReader();
       fs.addEventListener("loadend", ({ srcElement: { result } }) =>
         imageHolder.setAttribute("src", `data:image/jpg;base64,${result}`)
       );
       ws.onopen = () => ws.send("receiver");
       ws.onmessage = message => {
-        if (fs.readyState !== 1)
-          fs.readAsText(message.data);
+        console.info("Message");
+        if (fs.readyState !== 1) fs.readAsText(message.data);
       };
+    }
+    window.addEventListener("load", function() {
+      new Promise(function(resolve, reject) {
+        downloadPictures(() => {
+          setTimeout(resolve, 100);
+        });
+      }).then(function() {
+        const postImageUrl =
+          "https://picturesmanagement.azurewebsites.net/api/addpicture?name=";
+        connectToWS();
+        document.querySelector("#save_button").removeAttribute("hidden");
+        document
+          .querySelector("#save_button")
+          .addEventListener("click", function() {
+            const image = document.querySelector("#image-holder");
+            const imageSrc = image.getAttribute("src");
+            if (imageSrc.slice(0, 10) === "data:image") {
+              const b64 = imageSrc.slice(22);
+              const timestamp = Math.floor(Date.now());
+              const url = `${postImageUrl}snapshot_${timestamp}`;
+              $.post(
+                url,
+                JSON.stringify({ picture: b64 }),
+                null,
+                "json"
+              ).always(function() {
+                downloadPictures();
+              });
+            }
+          });
+        connectionButton.removeAttribute("hidden");
+        connectionButton.addEventListener("click", function() {
+          if (ws.readyState === 1) {
+            ws.close();
+            connectionButton.innerText = "Open connection";
+            imageHolder.setAttribute("src", "blank.png");
+          } else {
+            connectToWS();
+            connectionButton.innerText = "Close connection";
+          }
+        });
+      });
     });
   </script>
 </hmtl>

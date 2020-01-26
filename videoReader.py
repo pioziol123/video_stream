@@ -12,7 +12,7 @@ if not vc.isOpened():
 
 async def stream():
     socket = ctx.socket(zmq.PUB)
-    socket.bind("tcp://127.0.0.1:5555")
+    socket.bind("tcp://raspberry_ip:5555")
     rval = True
     result = True
     while rval and result:
